@@ -6,9 +6,10 @@ uniform struct {
 	mat4 rayDirMatrix;
 } camera;
 
-uniform struct {
+uniform struct Quadric{
   mat4 surface;
   mat4 clipper;
+  vec4 brdf; // xyz: brdf params, w: type ()
 } quadrics[3];
 
 uniform struct {
@@ -147,40 +148,46 @@ void main(void) {
 
   for(int iBounce = 0; iBounce < 20; iBounce++) {
     float t;
-    int i;
+    int objIdx;
+    bool isObjectHit = findBestHit(e, d, t, objIdx);
 
-  if( findBestHit(e, d, t, i) ){  
-    vec4 hit = e + t * d;
+    if (isObjectHit){
+      Quadric objectHit = quadrics[objIdx];
+      vec4 hit = e + t * d;
+      vec4 gradient = hit * objectHit.surface + objectHit.surface * hit;
+      vec3 normal = normalize(gradient.xyz);
+      
+      if (dot(normal, d.xyz) > 0.0) {
+          normal = -normal;
+      }
 
-    vec4 gradient = hit * quadrics[i].surface + quadrics[i].surface * hit;
-    vec3 normal = normalize(gradient.xyz);
-    
-    if (dot(normal, d.xyz) > 0.0) {
-        normal = -normal;
-    }
-    //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni
-    //fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
+      e = hit;
+      e.xyz += normal * 0.001;
 
-    e = hit;
-    e.xyz += normal * 0.001;
-    //FELADAT: tukorhoz kicomment
-    //d.xyz = reflect(d.xyz, normal);    
+      //Trace is different for types of objects
+      if (objectHit.brdf.w == 0.0f) { //diffuse monte-carlo brdf
+        vec3 randomDir = normalize(scene.randoms[iBounce].xyz);
+        // minden random iranyra egy pixelenkent random forgatas
+        //d.x = cos(perPixelNoise) * d.x + sin(perPixelNoise) * d.z;
+        //d.z =-sin(perPixelNoise) * d.x + cos(perPixelNoise) * d.z;
+        d.xyz = normalize(normal + randomDir);
+      }
 
-// minden random iranyra egy pixelenkent random forgatas
-    d.xyz = normalize(scene.randoms[iBounce].xyz);
-    //d.x = cos(perPixelNoise) * d.x + sin(perPixelNoise) * d.z;
-    //d.z =-sin(perPixelNoise) * d.x + cos(perPixelNoise) * d.z;
-    d.xyz = normalize(normal + d.xyz);
+      else if (objectHit.brdf.w == 1.0f) { //ideal mirror
+        d.xyz = reflect(d.xyz, normal);
+      }
+      
 
-    //d.xyz = normalize(normal + normalize(scene.randoms[iBounce].xyz));
+      //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni
+      //fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
+      w *= objectHit.brdf.xyz;
+      //w *= vec3(0.7, 0.75, 0.7); //kd * pi
 
-    w *= vec3(0.7, 0.75, 0.7); //kd * pi
-
-    } else {
-      //kiolvasni sugariranyban, ha nem talaltunk el semmit
-      fragmentColor.rgb += w * texture(scene.envTexture, d.xyz).rgb;    
-      break;
-    }
+      } else {
+        //kiolvasni sugariranyban, ha nem talaltunk el semmit
+        fragmentColor.rgb += w * texture(scene.envTexture, d.xyz).rgb;    
+        break;
+      }
   }
 
   fragmentColor = 

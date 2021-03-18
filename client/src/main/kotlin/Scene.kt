@@ -1,10 +1,7 @@
 import org.w3c.dom.HTMLCanvasElement
 import org.khronos.webgl.WebGLRenderingContext as GL
 import vision.gears.webglmath.UniformProvider
-import vision.gears.webglmath.Vec3
-import vision.gears.webglmath.Vec1
-import vision.gears.webglmath.Vec4Array
-import vision.gears.webglmath.Sampler2D
+import vision.gears.webglmath.*
 import org.khronos.webgl.Uint32Array
 import org.khronos.webgl.get
 import vision.gears.webglmath.Mat4
@@ -44,6 +41,20 @@ class Scene (
   init {
     addComponentsAndGatherUniforms(*Program.all)
 
+    createQuadrics()
+    createLights()    
+    
+    envTexture.set(TextureCube(gl,
+      "media/posx512.jpg",
+      "media/negx512.jpg",
+      "media/posy512.jpg",  
+      "media/negy512.jpg",  
+      "media/posz512.jpg",  
+      "media/negz512.jpg"  
+    ))
+  }
+
+  fun createQuadrics() {
     quadrics.add(Quadric(0))
     quadrics.add(Quadric(1))  
     quadrics.add(Quadric(2))  
@@ -54,19 +65,24 @@ class Scene (
     quadrics[0].clipper.transform(
       Mat4().translate(5.0f, 1.0f)
     )
+    quadrics[0].brdf.set(Vec4(0.8f, 0.8f, 0.8f, 1.0f))
 
     quadrics[1].surface.set(Quadric.plane)
     quadrics[1].clipper.set(Quadric.unitSphere)
     quadrics[1].clipper.transform(
       Mat4().scale(10f, 10f, 10f))
+    quadrics[1].brdf.set(Vec4(0.5f, 0.5f, 0.5f, 1.0f))
 
     quadrics[2].surface.set(Quadric.plane)
     quadrics[2].surface.transform(
       Mat4().translate(0f, 13f, 0f))
     quadrics[2].clipper.set(Quadric.unitSphere)
-    quadrics[2 ].clipper.transform(
+    quadrics[2].clipper.transform(
       Mat4().scale(10f, 10f, 10f).translate(0f, 13f, 0f))
+    quadrics[2].brdf.set(Vec4(0.7f, 0.75f, 0.7f, 0.0f))
+  } 
 
+  fun createLights() {
     lights.add(Light(0))
     lights.add(Light(1))
 
@@ -76,15 +92,6 @@ class Scene (
     lights[1].position.set(1.0f, 1.0f, 0.0f, 0.0f)
     lights[1].position.xyz.normalize()
     lights[1].powerDensity.set(1.0f, 1.0f, 1.0f)
-
-    envTexture.set(TextureCube(gl,
-      "media/posx512.jpg",
-      "media/negx512.jpg",
-      "media/posy512.jpg",  
-      "media/negy512.jpg",  
-      "media/posz512.jpg",  
-      "media/negz512.jpg"  
-    ))
   }
 
   fun resize(gl : WebGL2RenderingContext, canvas : HTMLCanvasElement) {

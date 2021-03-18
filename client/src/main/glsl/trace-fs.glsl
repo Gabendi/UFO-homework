@@ -10,7 +10,7 @@ uniform struct Quadric{
   mat4 surface;
   mat4 clipper;
   vec4 brdf; // xyz: brdf params, w: type ()
-} quadrics[3];
+} quadrics[4];
 
 uniform struct Light{
   vec4 position;
@@ -176,9 +176,14 @@ void main(void) {
       else if (objectHit.brdf.w == 1.0f) { //ideal mirror
         d.xyz = reflect(d.xyz, normal);
       }
+
+      else if (objectHit.brdf.w == 2.0f) { //ideal refracting
+       d.xyz = reflect(d.xyz, normal); 
+        //d.xyz = refract(d.xyz, normal, 0.1f);
+      }
       
       //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni
-      fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
+      //fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
 
       w *= objectHit.brdf.xyz;
     } 

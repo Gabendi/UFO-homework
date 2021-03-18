@@ -12,10 +12,10 @@ uniform struct Quadric{
   vec4 brdf; // xyz: brdf params, w: type ()
 } quadrics[3];
 
-uniform struct {
+uniform struct Light{
   vec4 position;
   vec3 powerDensity;
-} lights[2];
+} lights[1];
 
 uniform struct {
   samplerCube envTexture;
@@ -137,7 +137,7 @@ vec3 directLighting(vec3 x, vec3 n, vec3 v) { // n is the normal
 }
 
 void main(void) {
-  vec4 e = vec4(camera.position, 1);
+  vec4 eye = vec4(camera.position, 1);
   vec4 d = vec4(normalize(rayDir.xyz), 0);
 
   //egyszer a pixelben
@@ -149,11 +149,11 @@ void main(void) {
   for(int iBounce = 0; iBounce < 20; iBounce++) {
     float t;
     int objIdx;
-    bool isObjectHit = findBestHit(e, d, t, objIdx);
+    bool isObjectHit = findBestHit(eye, d, t, objIdx);
 
     if (isObjectHit){
       Quadric objectHit = quadrics[objIdx];
-      vec4 hit = e + t * d;
+      vec4 hit = eye + t * d;
       vec4 gradient = hit * objectHit.surface + objectHit.surface * hit;
       vec3 normal = normalize(gradient.xyz);
       
@@ -161,8 +161,8 @@ void main(void) {
           normal = -normal;
       }
 
-      e = hit;
-      e.xyz += normal * 0.001;
+      eye = hit;
+      eye.xyz += normal * 0.001;
 
       //Trace is different for types of objects
       if (objectHit.brdf.w == 0.0f) { //diffuse monte-carlo brdf
@@ -177,17 +177,16 @@ void main(void) {
         d.xyz = reflect(d.xyz, normal);
       }
       
-
       //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni
-      //fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
-      w *= objectHit.brdf.xyz;
-      //w *= vec3(0.7, 0.75, 0.7); //kd * pi
+      fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
 
-      } else {
-        //kiolvasni sugariranyban, ha nem talaltunk el semmit
-        fragmentColor.rgb += w * texture(scene.envTexture, d.xyz).rgb;    
-        break;
-      }
+      w *= objectHit.brdf.xyz;
+    } 
+    //kiolvasni sugariranyban, ha nem talaltunk el semmit
+    else {        
+      fragmentColor.rgb += w * texture(scene.envTexture, d.xyz).rgb;    
+      break;
+    }
   }
 
   fragmentColor = 

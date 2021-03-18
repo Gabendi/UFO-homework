@@ -84,14 +84,14 @@ class Scene (
 
   fun createLights() {
     lights.add(Light(0))
-    lights.add(Light(1))
+    //lights.add(Light(1))
 
     lights[0].position.set(3.0f, 4.0f, 5.0f)
-    lights[0].powerDensity.set(0.0f, 0.0f, 0.0f)
+    lights[0].powerDensity.set(10.0f, 10.0f, 10.0f)
     
-    lights[1].position.set(1.0f, 1.0f, 0.0f, 0.0f)
-    lights[1].position.xyz.normalize()
-    lights[1].powerDensity.set(1.0f, 1.0f, 1.0f)
+    //lights[1].position.set(1.0f, 1.0f, 0.0f, 0.0f)
+    //lights[1].position.xyz.normalize()
+    //lights[1].powerDensity.set(1.0f, 1.0f, 1.0f)
   }
 
   fun resize(gl : WebGL2RenderingContext, canvas : HTMLCanvasElement) {

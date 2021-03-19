@@ -10,7 +10,7 @@ uniform struct Quadric{
   mat4 surface;
   mat4 clipper;
   vec4 brdf; // xyz: brdf params, w: type ()
-} quadrics[40];
+} quadrics[5];
 
 uniform struct Light{
   vec4 position;
@@ -82,7 +82,7 @@ bool findBestHit(vec4 e, vec4 d, out float bestT, out int bestIndex) {
   bestT = 1000000.0;
   for(int i = 0; i < quadrics.length(); i++) {
     float t = intersectQuadric(e, d, quadrics[i].surface, quadrics[i].clipper);
-    if (t > 0.0 && t < bestT) {
+    if (t > 0.0 && t < bestT ) {
       bestT = t;
       bestIndex = i;
     }
@@ -146,6 +146,10 @@ void main(void) {
   fragmentColor = vec4(0, 0, 0, 1);
   vec3 w = vec3(1, 1, 1); //akkumulalt szorodasi valseg
 
+  vec4 lastHit;
+  int lastObjIdx = -1;
+  Quadric lastObjectHit;
+
   for(int iBounce = 0; iBounce < 20; iBounce++) {
     float t;
     int objIdx;
@@ -161,8 +165,7 @@ void main(void) {
           normal = -normal;
       }
 
-      eye = hit;
-      
+      eye = hit;      
 
       //Trace is different for types of objects
       if (objectHit.brdf.w == 0.0f) { //diffuse monte-carlo brdf
@@ -173,19 +176,23 @@ void main(void) {
         //d.x = cos(perPixelNoise) * d.x + sin(perPixelNoise) * d.z;
         //d.z =-sin(perPixelNoise) * d.x + cos(perPixelNoise) * d.z;
         d.xyz = normalize(normal + randomDir);
+        w *= objectHit.brdf.xyz;
       }
 
       else if (objectHit.brdf.w == 1.0f) { //ideal mirror
         eye.xyz += normal * 0.001;
         d.xyz = reflect(d.xyz, normal);
+        w *= objectHit.brdf.xyz;
       }
 
       else if (objectHit.brdf.w == 2.0f) { //ideal refracting
         eye.xyz += normal * -0.001;
         d.xyz = refract(d.xyz, normal, 1.0f / 3.0f);
+        w *= objectHit.brdf.xyz;
       }
+      
       else if (objectHit.brdf.w == 3.0f) { //ideal glass
-        if (scene.randoms[0].x < 0.7f) {
+        if (scene.randoms[0].x < 0.7f) { //need more params?
           eye.xyz += normal * -0.001;
           d.xyz = refract(d.xyz, normal, 1.0f / 3.0f);  
         }
@@ -193,13 +200,24 @@ void main(void) {
           eye.xyz += normal * 0.001;
           d.xyz = reflect(d.xyz, normal);  
         }
-        
+        w *= objectHit.brdf.xyz;
       }
-      
+
+      else if (objectHit.brdf.w == 4.0f) { //ideal attenuation
+        d.xyz = d.xyz; //not changing the incoming raydir
+        if (objIdx == lastObjIdx) {
+          float distanceInObj = sqrt(dot(hit, lastHit));
+          w *= exp(-2000.0f * distanceInObj) * objectHit.brdf.xyz;
+        }
+      }
+  
       //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni
       //fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
 
-      w *= objectHit.brdf.xyz;
+
+      //updating last hit for attenuating objects
+      lastHit = hit;
+      lastObjectHit = objectHit;
     } 
     //kiolvasni sugariranyban, ha nem talaltunk el semmit
     else {        

@@ -59,7 +59,7 @@ class Scene (
     quadrics.add(Quadric(1)) //plane  
     quadrics.add(Quadric(2)) //plane
     quadrics.add(Quadric(3))  
-  //  quadrics.add(Quadric(4))  
+    quadrics.add(Quadric(4))  
     
     quadrics[0].surface.transform(
       Mat4().translate(5.0f, 1.0f)
@@ -90,6 +90,14 @@ class Scene (
       Mat4().translate(2.0f, 1.5f)
     )
     quadrics[3].brdf.set(Vec4(0.8f, 0.8f, 0.8f, 3.0f))
+
+    quadrics[4].surface.transform(
+      Mat4().translate(3.0f, 1.0f)
+    )
+    quadrics[4].clipper.transform(
+      Mat4().translate(3.0f, 1.0f)
+    )
+    quadrics[4].brdf.set(Vec4(0.3f, 0.3f, 0.3f, 4.0f))
 
     /*quadrics[4].surface.set(Quadric.plane)
     quadrics[4].surface.transform(

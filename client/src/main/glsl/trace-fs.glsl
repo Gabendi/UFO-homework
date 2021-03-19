@@ -10,7 +10,7 @@ uniform struct Quadric{
   mat4 surface;
   mat4 clipper;
   vec4 brdf; // xyz: brdf params, w: type ()
-} quadrics[4];
+} quadrics[40];
 
 uniform struct Light{
   vec4 position;
@@ -162,10 +162,12 @@ void main(void) {
       }
 
       eye = hit;
-      eye.xyz += normal * 0.001;
+      
 
       //Trace is different for types of objects
       if (objectHit.brdf.w == 0.0f) { //diffuse monte-carlo brdf
+        eye.xyz += normal * 0.001;
+
         vec3 randomDir = normalize(scene.randoms[iBounce].xyz);
         // minden random iranyra egy pixelenkent random forgatas
         //d.x = cos(perPixelNoise) * d.x + sin(perPixelNoise) * d.z;
@@ -174,12 +176,24 @@ void main(void) {
       }
 
       else if (objectHit.brdf.w == 1.0f) { //ideal mirror
+        eye.xyz += normal * 0.001;
         d.xyz = reflect(d.xyz, normal);
       }
 
       else if (objectHit.brdf.w == 2.0f) { //ideal refracting
-       d.xyz = reflect(d.xyz, normal); 
-        //d.xyz = refract(d.xyz, normal, 0.1f);
+        eye.xyz += normal * -0.001;
+        d.xyz = refract(d.xyz, normal, 1.0f / 3.0f);
+      }
+      else if (objectHit.brdf.w == 3.0f) { //ideal glass
+        if (scene.randoms[0].x < 0.7f) {
+          eye.xyz += normal * -0.001;
+          d.xyz = refract(d.xyz, normal, 1.0f / 3.0f);  
+        }
+        else {
+          eye.xyz += normal * 0.001;
+          d.xyz = reflect(d.xyz, normal);  
+        }
+        
       }
       
       //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni

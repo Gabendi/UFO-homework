@@ -91,15 +91,13 @@ class Scene (
     )
     quadrics[3].brdf.set(Vec4(0.8f, 0.8f, 0.8f, 3.0f))
 
-
-    /*quadrics[4].surface.set(Quadric.plane)
     quadrics[4].surface.transform(
-      Mat4().translate(0f, 7f, 0f))
-    quadrics[4].clipper.set(Quadric.unitSphere)
+      Mat4().translate(2.0f, 4.0f)
+    )
     quadrics[4].clipper.transform(
-      Mat4().scale(10f, 10f, 10f).translate(0f, 7f, 0f))
-    quadrics[4].brdf.set(Vec4(1.0f, 1.0f, 1.0f, 2.0f))
-*/
+      Mat4().translate(2.0f, 4.0f)
+    )
+    quadrics[4].brdf.set(Vec4(0.8f, 0.6f, 0.3f, 4.0f))
   } 
 
   fun createLights() {

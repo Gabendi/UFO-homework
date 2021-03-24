@@ -10,7 +10,7 @@ uniform struct Quadric{
   mat4 surface;
   mat4 clipper;
   vec4 brdf; // xyz: brdf params, w: type ()
-} quadrics[4];
+} quadrics[5];
 
 uniform struct Light{
   vec4 position;
@@ -38,6 +38,9 @@ float goldRand(in vec3 seed){
     return fract(sin(dot(seed.xy*(seed.z+PHIG), vec2(PHIG, PIG)))*SQ2G);
 }
 
+vec3 fresnel(vec3 F0, float cosTheta) {
+    return F0 + (vec3(1, 1, 1) - F0) * pow(cosTheta, 5.0);
+}
 
 float intersectQuadric(vec4 e, vec4 d, mat4 surface, mat4 clipper) {
   float a = dot(d, surface * d);
@@ -149,12 +152,18 @@ void shadeRefracting(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, o
 }
 
 void shadeGlass(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, out vec3 w, int iBounce) {
-  if (scene.randoms[iBounce].x < 0.7f) { //need more params?
+  if (scene.randoms[iBounce].x < 0.5f) { //need more params?
     shadeRefracting(eye, d, objectHit, normal, w);  
   }
   else {
     shadeMirror(eye, d, objectHit, normal, w);
   }
+}
+
+void shadeFresnel(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, out vec3 w) {
+  w *= fresnel(objectHit.brdf.xyz, dot(-d.xyz, normal));
+  eye.xyz += normal * 0.001;
+  d.xyz = reflect(d.xyz, normal);
 }
 
 void shadeDiffuseMonteCarlo(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, out vec3 w, int iBounce, float perPixelNoise) {
@@ -209,29 +218,25 @@ void main(void) {
       eye = hit;      
 
       //Trace is different for types of objects
-      if (objectHit.brdf.w == 0.0f) { //diffuse monte-carlo brdf
+      if (objectHit.brdf.w == 0.0f) { 
         shadeDiffuseMonteCarlo(eye, d, objectHit, normal, w, iBounce, perPixelNoise);
       }
 
-      else if (objectHit.brdf.w == 1.0f) { //ideal mirror
+      else if (objectHit.brdf.w == 1.0f) { 
         shadeMirror(eye, d, objectHit, normal, w);
       }
 
-      else if (objectHit.brdf.w == 2.0f) { //ideal refracting
+      else if (objectHit.brdf.w == 2.0f) { 
         shadeRefracting(eye, d, objectHit, normal, w);
       }
       
-      else if (objectHit.brdf.w == 3.0f) { //ideal glass
+      else if (objectHit.brdf.w == 3.0f) { 
         shadeGlass(eye, d, objectHit, normal, w, iBounce);
-        /*if (scene.randoms[iBounce].x < 0.7f) { //need more params?
-          shadeRefracting(eye, d, objectHit, normal, w);  
-        }
-        else {
-          shadeMirror(eye, d, objectHit, normal, w);
-        }*/
+      }
+      else if (objectHit.brdf.w == 4.0f) {
+        shadeFresnel(eye, d, objectHit, normal, w);
       }
 
-      //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni
       fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
 
       //updating last hit for attenuating objects

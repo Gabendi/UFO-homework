@@ -10,7 +10,7 @@ uniform struct Quadric{
   mat4 surface;
   mat4 clipper;
   vec4 brdf; // xyz: brdf params, w: type ()
-} quadrics[5];
+} quadrics[4];
 
 uniform struct Light{
   vec4 position;
@@ -136,6 +136,44 @@ vec3 directLighting(vec3 x, vec3 n, vec3 v) { // n is the normal
   return reflectedRadiance;
 }
 
+void shadeMirror(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, out vec3 w) {
+  eye.xyz += normal * 0.001;
+  d.xyz = reflect(d.xyz, normal);
+  w *= objectHit.brdf.xyz;
+}
+
+void shadeRefracting(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, out vec3 w) {
+  eye.xyz += normal * -0.001;
+  d.xyz = refract(d.xyz, normal, 0.6f);
+  w *= objectHit.brdf.xyz;
+}
+
+void shadeGlass(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, out vec3 w, int iBounce) {
+  if (scene.randoms[iBounce].x < 0.7f) { //need more params?
+    shadeRefracting(eye, d, objectHit, normal, w);  
+  }
+  else {
+    shadeMirror(eye, d, objectHit, normal, w);
+  }
+}
+
+void shadeDiffuseMonteCarlo(out vec4 eye, out vec4 d, Quadric objectHit, vec3 normal, out vec3 w, int iBounce, float perPixelNoise) {
+  eye.xyz += normal * 0.001;
+
+  vec3 randomDir = normalize(scene.randoms[iBounce].xyz);
+  // minden random iranyra egy pixelenkent random forgatas
+  d.x = cos(perPixelNoise) * d.x + sin(perPixelNoise) * d.z;
+  d.z =-sin(perPixelNoise) * d.x + cos(perPixelNoise) * d.z;
+  d.xyz = normalize(normal + randomDir);
+  w *= objectHit.brdf.xyz;
+}
+
+void addConstantFog(vec3 mu, float dist, out vec3 w) {
+  w.x = w.x * exp(-mu.x * dist);
+  w.y = w.y * exp(-mu.y * dist);
+  w.z = w.z * exp(-mu.z * dist);
+}
+
 void main(void) {
   vec4 eye = vec4(camera.position, 1);
   vec4 d = vec4(normalize(rayDir.xyz), 0);
@@ -165,55 +203,36 @@ void main(void) {
           normal = -normal;
       }
 
+      //constant fog
+      addConstantFog(vec3(0.03f, 0.01f, 0.007f), length(eye - hit), w);
+
       eye = hit;      
 
       //Trace is different for types of objects
       if (objectHit.brdf.w == 0.0f) { //diffuse monte-carlo brdf
-        eye.xyz += normal * 0.001;
-
-        vec3 randomDir = normalize(scene.randoms[iBounce].xyz);
-        // minden random iranyra egy pixelenkent random forgatas
-        //d.x = cos(perPixelNoise) * d.x + sin(perPixelNoise) * d.z;
-        //d.z =-sin(perPixelNoise) * d.x + cos(perPixelNoise) * d.z;
-        d.xyz = normalize(normal + randomDir);
-        w *= objectHit.brdf.xyz;
+        shadeDiffuseMonteCarlo(eye, d, objectHit, normal, w, iBounce, perPixelNoise);
       }
 
       else if (objectHit.brdf.w == 1.0f) { //ideal mirror
-        eye.xyz += normal * 0.001;
-        d.xyz = reflect(d.xyz, normal);
-        w *= objectHit.brdf.xyz;
+        shadeMirror(eye, d, objectHit, normal, w);
       }
 
       else if (objectHit.brdf.w == 2.0f) { //ideal refracting
-        eye.xyz += normal * -0.001;
-        d.xyz = refract(d.xyz, normal, 1.0f / 3.0f);
-        w *= objectHit.brdf.xyz;
+        shadeRefracting(eye, d, objectHit, normal, w);
       }
       
       else if (objectHit.brdf.w == 3.0f) { //ideal glass
-        if (scene.randoms[0].x < 0.7f) { //need more params?
-          eye.xyz += normal * -0.001;
-          d.xyz = refract(d.xyz, normal, 1.0f / 3.0f);  
+        shadeGlass(eye, d, objectHit, normal, w, iBounce);
+        /*if (scene.randoms[iBounce].x < 0.7f) { //need more params?
+          shadeRefracting(eye, d, objectHit, normal, w);  
         }
         else {
-          eye.xyz += normal * 0.001;
-          d.xyz = reflect(d.xyz, normal);  
-        }
-        w *= objectHit.brdf.xyz;
+          shadeMirror(eye, d, objectHit, normal, w);
+        }*/
       }
 
-      else if (objectHit.brdf.w == 4.0f) { //ideal attenuation
-        d.xyz = d.xyz; //not changing the incoming raydir
-        if (objIdx == lastObjIdx) {
-          float distanceInObj = sqrt(dot(hit, lastHit));
-          w *= exp(-2000.0f * distanceInObj) * objectHit.brdf.xyz;
-        }
-      }
-  
       //FELADAT: berakn iegy pontfenyforrast, s ezt kicommentezni
-      //fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
-
+      fragmentColor.rgb += w * directLighting(hit.xyz, normal, -d.xyz);
 
       //updating last hit for attenuating objects
       lastHit = hit;
@@ -221,6 +240,7 @@ void main(void) {
     } 
     //kiolvasni sugariranyban, ha nem talaltunk el semmit
     else {        
+      addConstantFog(vec3(0.03f, 0.01f, 0.005f), 10.0f, w);      
       fragmentColor.rgb += w * texture(scene.envTexture, d.xyz).rgb;    
       break;
     }

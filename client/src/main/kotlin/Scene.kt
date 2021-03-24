@@ -81,7 +81,7 @@ class Scene (
     quadrics[2].clipper.set(Quadric.unitSphere)
     quadrics[2].clipper.transform(
       Mat4().scale(10f, 10f, 10f).translate(0f, 13f, 0f))
-    quadrics[2].brdf.set(Vec4(0.7f, 0.75f, 0.7f, 0.0f))
+    quadrics[2].brdf.set(Vec4(0.7f, 0.75f, 0.7f, 2.0f))
   
     quadrics[3].surface.transform(
       Mat4().translate(2.0f, 1.5f)
@@ -91,13 +91,6 @@ class Scene (
     )
     quadrics[3].brdf.set(Vec4(0.8f, 0.8f, 0.8f, 3.0f))
 
-    quadrics[4].surface.transform(
-      Mat4().translate(3.0f, 1.0f)
-    )
-    quadrics[4].clipper.transform(
-      Mat4().translate(3.0f, 1.0f)
-    )
-    quadrics[4].brdf.set(Vec4(0.3f, 0.3f, 0.3f, 4.0f))
 
     /*quadrics[4].surface.set(Quadric.plane)
     quadrics[4].surface.transform(
@@ -113,8 +106,8 @@ class Scene (
     lights.add(Light(0))
     //lights.add(Light(1))
 
-    lights[0].position.set(3.0f, 4.0f, 5.0f)
-    lights[0].powerDensity.set(10.0f, 10.0f, 10.0f)
+    lights[0].position.set(0.0f, 8.0f, 0.0f)
+    lights[0].powerDensity.set(50.0f, 50.0f, 50.0f)
     
     //lights[1].position.set(1.0f, 1.0f, 0.0f, 0.0f)
     //lights[1].position.xyz.normalize()
